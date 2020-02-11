@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveFunctor, LambdaCase #-}
 
 module Optimizer
     ( optimizeInstructions
@@ -16,8 +16,10 @@ type Value = Int
 data OptimizedInstruction
     = Shift Offset
     | Add Value Offset
-    | AssignMultiply Offset Int
+    | MultiplyAdd Int Offset
+    | Clear Offset
     | Print Offset
+    | Block [OptimizedInstruction]
     | Read Offset
     | Loop [OptimizedInstruction]
   deriving Show
@@ -73,11 +75,13 @@ optimizerPass xs = optimize $ unwrap xs
   where
     optimize :: [OptimizedInstruction] -> OptimizationResult
     optimize xs = case xs of
+        Block xs : ys -> InProgress $ xs ++ ys
         Shift n : Shift m : xs -> InProgress $ Shift (n + m) : xs
-        Loop [] : xs -> InProgress xs
-        Loop body : xs -> case optimize body of
-            Done body -> (Loop body :) <$> optimize xs
-            InProgress body -> InProgress $ Loop body : xs
+        Loop []           : xs -> InProgress xs
+        Loop body         : xs -> case optimizeLoop body of
+            Done       instr -> (instr :) <$> optimize xs
+            InProgress instr -> InProgress $ instr : xs
+        MultiplyAdd 0 offset : xs-> InProgress $ Clear offset : xs
         Add n offset : Shift m : xs ->
             InProgress $ Shift m : Add n (offset - m) : xs
         Add n offset0 : Add m offset1 : xs | offset0 == offset1 ->
@@ -87,3 +91,24 @@ optimizerPass xs = optimize $ unwrap xs
         Shift 0 : xs -> InProgress xs
         y       : ys -> (y :) <$> optimize ys
         []           -> Done []
+    optimizeLoop :: [OptimizedInstruction] -> Result OptimizedInstruction
+    optimizeLoop xs = case optimize xs of
+        Done xs -> if isSimple xs && goesToMinusOne xs
+            then InProgress . Block $ map addToSet xs
+            else Done $ Loop xs
+        InProgress xs -> InProgress $ Loop xs
+      where
+        addToSet :: OptimizedInstruction -> OptimizedInstruction
+        addToSet (Add (-1) 0) = Clear 0
+        addToSet (Add n offset) = MultiplyAdd n offset
+        addToSet i = i
+        isSimple :: [OptimizedInstruction] -> Bool
+        isSimple = all $ \case
+            Add _ _ -> True
+            _       -> False
+        goesToMinusOne :: [OptimizedInstruction] -> Bool
+        goesToMinusOne = (== -1) . foldl sumIterAdds 0
+          where
+            sumIterAdds :: Int -> OptimizedInstruction -> Int
+            sumIterAdds acc (Add n 0) = n + acc
+            sumIterAdds acc _         = acc
