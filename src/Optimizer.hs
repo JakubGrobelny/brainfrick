@@ -2,6 +2,7 @@
 
 module Optimizer
     ( optimizeInstructions
+    , interactiveOptimization
     , OptimizedInstruction
     )
 where
@@ -15,7 +16,7 @@ type Value = Int
 data OptimizedInstruction
     = Shift Offset
     | Add Value Offset
-    | Clear Offset
+    | AssignMultiply Offset Int
     | Print Offset
     | Read Offset
     | Loop [OptimizedInstruction]
@@ -52,32 +53,37 @@ optimizeInstructions :: [I.Instruction] -> [OptimizedInstruction]
 optimizeInstructions xs = unwrap $ until isDone optimizerPass xs'
     where xs' = InProgress $ convertInstructions xs
 
+interactiveOptimization :: [I.Instruction] -> IO ()
+interactiveOptimization xs = do
+    let instructions = convertInstructions xs
+    print instructions
+    interactiveOptimization' instructions
+  where
+    interactiveOptimization' :: [OptimizedInstruction] -> IO ()
+    interactiveOptimization' xs = do
+        let optimized = optimizerPass $ InProgress xs
+        if isDone optimized
+            then return ()
+            else do
+                print . unwrap $ optimized
+                interactiveOptimization' $ unwrap optimized
+
 optimizerPass :: OptimizationResult -> OptimizationResult
 optimizerPass xs = optimize $ unwrap xs
   where
     optimize :: [OptimizedInstruction] -> OptimizationResult
     optimize xs = case xs of
         Shift n : Shift m : xs -> InProgress $ Shift (n + m) : xs
+        Loop [] : xs -> InProgress xs
+        Loop body : xs -> case optimize body of
+            Done body -> (Loop body :) <$> optimize xs
+            InProgress body -> InProgress $ Loop body : xs
+        Add n offset : Shift m : xs ->
+            InProgress $ Shift m : Add n (offset - m) : xs
         Add n offset0 : Add m offset1 : xs | offset0 == offset1 ->
-            InProgress $ Add (n + m) offset0 : xs
+            InProgress $ Add (n + m) offset1 : xs
         Shift n : Add k offset : Shift m : xs | n * m < 0 ->
-            InProgress $ Add k n : Shift (n + m) : xs
+            InProgress $ Add k (offset + n) : Shift (n + m) : xs
         Shift 0 : xs -> InProgress xs
-        y : ys -> (y :) <$> optimize ys
-        []     -> Done []
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        y       : ys -> (y :) <$> optimize ys
+        []           -> Done []

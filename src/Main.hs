@@ -4,12 +4,22 @@ import           Parser
 import           Optimizer
 import           Text.Megaparsec
 import           Data.Text
+import           System.IO
 
+
+readInput :: IO String
+readInput = do
+    eof <- isEOF
+    if eof
+        then return ""
+        else do
+            char <- getChar
+            (char :) <$> readInput
 
 main :: IO ()
-main = interact $ show . parseAndOptimize . pack
-  where
-    parseAndOptimize :: Text -> Maybe [OptimizedInstruction]
-    parseAndOptimize str = do
-        instructions <- parseMaybe parseInstructions str
-        return $ optimizeInstructions instructions
+main = do
+    input <- pack <$> readInput
+    case parse parseInstructions "" input of
+        Left err -> putStr $ errorBundlePretty err
+        Right instructions ->
+            interactiveOptimization instructions    
