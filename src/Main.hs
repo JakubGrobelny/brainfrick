@@ -12,4 +12,4 @@ main = interact $ show . parseAndOptimize . pack
     parseAndOptimize :: Text -> Maybe [OptimizedInstruction]
     parseAndOptimize str = do
         instructions <- parseMaybe parseInstructions str
-        return $ convertInstructions instructions
+        return $ optimizeInstructions instructions
