@@ -1,0 +1,1 @@
+,[->+<].>. read into 0; move to 1; write 0 and 1

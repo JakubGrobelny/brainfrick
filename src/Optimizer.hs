@@ -76,6 +76,10 @@ optimizerPass xs = optimize $ unwrap xs
     optimize :: [OptimizedInstruction] -> OptimizationResult
     optimize xs = case xs of
         Block xs : ys -> InProgress $ xs ++ ys
+        Shift n : Print i : Shift m : xs | n * m < 0 ->
+            InProgress $ Print (i + n) : Shift (n + m) : xs
+        Shift n : Read i : Shift m : xs | n * m < 0 ->
+            InProgress $ Read (i + n) : Shift (n + m) : xs
         Shift n : Shift m : xs -> InProgress $ Shift (n + m) : xs
         Loop []           : xs -> InProgress xs
         Loop body         : xs -> case optimizeLoop body of
@@ -94,7 +98,7 @@ optimizerPass xs = optimize $ unwrap xs
     optimizeLoop :: [OptimizedInstruction] -> Result OptimizedInstruction
     optimizeLoop xs = case optimize xs of
         Done xs -> if isSimple xs && goesToMinusOne xs
-            then InProgress . Block $ map addToSet xs
+            then InProgress . Block . reverse $ map addToSet xs
             else Done $ Loop xs
         InProgress xs -> InProgress $ Loop xs
       where

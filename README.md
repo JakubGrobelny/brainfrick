@@ -1,4 +1,4 @@
-# brainfrick
+# BrainFrick
 Optimizing compiler for brainfuck
 
 ***
@@ -30,10 +30,10 @@ $ stack exec brainfrick
 ### Usage
 
 ```bash
-$ ./brainfrick --[TARGET]
+brainfrick [OPTION...] file
+  -o FILE    --output=FILE    output file
+  -t TARGET  --target=TARGET  compilation target
+  file                        input file
 ```
 
-where the `TARGET` can be one of the following:
-- `C`
-<!-- TODO: add more -->
-
+***
