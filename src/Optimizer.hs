@@ -3,7 +3,7 @@
 module Optimizer
     ( optimizeInstructions
     , interactiveOptimization
-    , OptimizedInstruction
+    , OptimizedInstruction(..)
     )
 where
 

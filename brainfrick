@@ -1,0 +1,2 @@
+#!/bin/bash
+./.stack-work/dist/x86_64-linux-tinfo6/Cabal-2.4.0.1/build/brainfrick/brainfrick $@

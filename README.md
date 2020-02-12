@@ -36,4 +36,8 @@ brainfrick [OPTION...] file
   file                        input file
 ```
 
+Valid targets are:
+- `c`
+<!-- TODO -->
+
 ***
